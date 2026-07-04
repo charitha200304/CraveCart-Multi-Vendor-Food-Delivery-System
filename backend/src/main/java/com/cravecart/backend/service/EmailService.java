@@ -9,6 +9,9 @@ import org.springframework.mail.javamail.MimeMessageHelper;
 import jakarta.mail.internet.MimeMessage;
 import org.springframework.web.client.RestTemplate;
 import com.cravecart.backend.util.ResendRequest;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.MediaType;
 
 @Service
 @RequiredArgsConstructor
@@ -21,42 +24,55 @@ public class EmailService {
     @Value("${spring.mail.username}")
     private String senderEmail;
 
-    @Value("${mailjet.sender.name:CraveCart}")
-    private String senderName;
+    @Value("${RESEND_API_KEY:}")
+private String resendApiKey;
+
+@Value("${RESEND_FROM_EMAIL:}")
+private String resendFromEmail;
+
+private final RestTemplate restTemplate = new RestTemplate();
 
     @Async
-    public void sendVerificationEmail(String toEmail, String name, String verificationCode) {
-        System.out.println(">> Sending Gmail SMTP verification email to: [" + toEmail + "]");
-        
-        String frontendUrl = System.getenv().getOrDefault("FRONTEND_URL", "http://localhost:5173");
-        String verifyURL = frontendUrl + "/verify?code=" + verificationCode + "&email=" + toEmail;
+public void sendVerificationEmail(String toEmail, String name, String verificationCode) {
+    System.out.println(">> Sending verification email to: [" + toEmail + "]");
 
-        String htmlContent = String.format(
-            "<h3>Welcome to CraveCart, %s!</h3>" +
-            "<p>Please click the link below to verify your registration:</p>" +
-            "<h4><a href='%s'>VERIFY MY ACCOUNT</a></h4>" +
-            "<p>Thank you,<br>The CraveCart Team</p>", 
-            name, verifyURL
-        );
+    String frontendUrl = System.getenv().getOrDefault("FRONTEND_URL", "http://localhost:5173");
+    String verifyURL = frontendUrl + "/verify?code=" + verificationCode + "&email=" + toEmail;
 
+    String htmlContent = String.format(
+        "<h3>Welcome to CraveCart, %s!</h3>" +
+        "<p>Please click the link below to verify your registration:</p>" +
+        "<h4><a href='%s'>VERIFY MY ACCOUNT</a></h4>" +
+        "<p>Thank you,<br>The CraveCart Team</p>",
+        name, verifyURL
+    );
+
+    if (resendApiKey != null && !resendApiKey.isBlank()) {
+        sendViaResend(toEmail, "Please verify your registration", htmlContent);
+    } else {
         sendHtmlEmail(toEmail, "Please verify your registration", htmlContent);
     }
+}
 
     @Async
-    public void sendVerificationOtpEmail(String toEmail, String otpCode) {
-        System.out.println(">> Sending Mailjet HTTP registration OTP to: [" + toEmail + "]");
+public void sendVerificationOtpEmail(String toEmail, String otpCode) {
+    System.out.println(">> Sending OTP email to: [" + toEmail + "]");
 
-        String htmlContent = String.format(
-            "<h3>CraveCart Registration OTP</h3>" +
-            "<p>Your email verification code is:</p>" +
-            "<h2><strong>%s</strong></h2>" +
-            "<p>This code is valid for 5 minutes. Please do not share it with anyone.</p>" +
-            "<p>Thank you,<br>The CraveCart Team</p>", 
-            otpCode
-        );
+    String htmlContent = String.format(
+        "<h3>CraveCart Registration OTP</h3>" +
+        "<p>Your email verification code is:</p>" +
+        "<h2><strong>%s</strong></h2>" +
+        "<p>This code is valid for 5 minutes. Please do not share it with anyone.</p>" +
+        "<p>Thank you,<br>The CraveCart Team</p>",
+        otpCode
+    );
 
+    if (resendApiKey != null && !resendApiKey.isBlank()) {
+        sendViaResend(toEmail, "Your Email Verification Code - CraveCart", htmlContent);
+    } else {
         sendHtmlEmail(toEmail, "Your Email Verification Code - CraveCart", htmlContent);
     }
+}
 
     @Async
     public void sendPasswordResetEmail(String toEmail, String name, String resetToken) {
@@ -184,27 +200,27 @@ public class EmailService {
                 }
             }
         }
-    }
-
     /**
-     * Sends a friendly welcome email to a newly registered customer.
+     * Sends an email using Resend's HTTP API.
      */
-    @Async
-    public void sendWelcomeEmail(String toEmail, String name) {
-        String subject = "Welcome to CraveCart! 🎉";
-        String htmlContent = String.format(
-                "<div style='font-family:Arial,Helvetica,sans-serif; max-width:600px; margin:auto; padding:20px; background:#f9f9f9; border-radius:8px;'>"
-                        + "<h2 style='color:#E23744;'>Welcome, %s!</h2>"
-                        + "<p>Thank you for joining CraveCart. We're thrilled to have you with us.</p>"
-                        + "<p>Explore delicious meals, place orders, and enjoy a seamless food experience.</p>"
-                        + "<a href='%s' style='display:inline-block; margin-top:10px; padding:10px 20px; background:#E23744; color:#fff; text-decoration:none; border-radius:4px;'>Visit Our Site</a>"
-                        + "<p style='margin-top:20px; font-size:0.9em; color:#666;'>Happy dining!<br/>The CraveCart Team</p>"
-                        + "</div>",
-                name,
-                System.getenv().getOrDefault("FRONTEND_URL", "https://crave-cart-delta.vercel.app")
-        );
-        sendHtmlEmail(toEmail, subject, htmlContent);
+    private void sendViaResend(String to, String subject, String htmlContent) {
+        System.out.println(">> Sending Resend email to: [" + to + "]");
+        try {
+            String apiUrl = "https://api.resend.com/emails";
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            if (resendApiKey != null && !resendApiKey.isBlank()) {
+                headers.setBearerAuth(resendApiKey);
+            }
+            ResendRequest payload = new ResendRequest(resendFromEmail, to, subject, htmlContent);
+            HttpEntity<ResendRequest> request = new HttpEntity<>(payload, headers);
+            restTemplate.postForObject(apiUrl, request, String.class);
+            System.out.println(">> Resend email sent to: [" + to + "]");
+        } catch (Exception e) {
+            System.err.println(">> Failed to send email via Resend: " + e.getMessage());
+            // Fallback to SMTP
+            sendHtmlEmail(to, subject, htmlContent);
+        }
     }
-
 
 }
