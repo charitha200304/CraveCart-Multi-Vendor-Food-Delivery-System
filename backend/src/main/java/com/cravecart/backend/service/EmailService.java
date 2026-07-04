@@ -203,8 +203,9 @@ public void sendVerificationOtpEmail(String toEmail, String otpCode) {
                 }
             }
         }
+    }
     
-/**
+    /**
      * Sends an email using Resend's HTTP API.
      */
     private void sendViaResend(String to, String subject, String htmlContent) {
