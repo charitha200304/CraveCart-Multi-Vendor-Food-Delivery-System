@@ -30,8 +30,8 @@ public class EmailService {
     @Value("${RESEND_API_KEY:}")
 private String resendApiKey;
 
-@Value("${RESEND_FROM_EMAIL:}")
-private String resendFromEmail;
+    @Value("${RESEND_FROM_EMAIL:charithachiranjeewa@gmail.dev}")
+    private String resendFromEmail;
 
 private final RestTemplate restTemplate = new RestTemplate();
 
