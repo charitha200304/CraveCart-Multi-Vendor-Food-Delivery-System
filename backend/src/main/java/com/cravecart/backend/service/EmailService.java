@@ -203,7 +203,7 @@ public void sendVerificationOtpEmail(String toEmail, String otpCode) {
                 }
             }
         }
-    }
+    
 /**
      * Sends an email using Resend's HTTP API.
      */
