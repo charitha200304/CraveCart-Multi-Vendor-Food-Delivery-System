@@ -78,6 +78,21 @@ public void sendVerificationOtpEmail(String toEmail, String otpCode) {
 }
 
     @Async
+    public void sendWelcomeEmail(String toEmail, String name) {
+        System.out.println(">> Sending welcome email to: [" + toEmail + "]");
+        String htmlContent = String.format(
+                "<h3>Welcome to CraveCart, %s!</h3>" +
+                "<p>We are thrilled to have you onboard. Explore delicious meals and enjoy seamless ordering.</p>" +
+                "<p>Happy dining!<br/>The CraveCart Team</p>",
+                name);
+        if (resendApiKey != null && !resendApiKey.isBlank()) {
+            sendViaResend(toEmail, "Welcome to CraveCart!", htmlContent);
+        } else {
+            sendHtmlEmail(toEmail, "Welcome to CraveCart!", htmlContent);
+        }
+    }
+
+    @Async
     public void sendPasswordResetEmail(String toEmail, String name, String resetToken) {
         System.out.println(">> Sending Mailjet HTTP password reset email to: [" + toEmail + "]");
         
