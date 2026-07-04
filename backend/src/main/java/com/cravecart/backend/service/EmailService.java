@@ -75,7 +75,24 @@ public void sendVerificationOtpEmail(String toEmail, String otpCode) {
     } else {
         sendHtmlEmail(toEmail, "Your Email Verification Code - CraveCart", htmlContent);
     }
-}
+
+    }
+
+    @Async
+    public void sendRestaurantRegistrationEmail(String toEmail, String restaurantName) {
+        System.out.println(">> Sending restaurant registration email to: [" + toEmail + "]");
+        String htmlContent = String.format(
+                "<h3>Congratulations, %s!</h3>" +
+                "<p>Your restaurant \"%s\" has been successfully registered on CraveCart.</p>" +
+                "<p>You can now start adding menus and receive orders.</p>" +
+                "<p>Best regards,<br/>The CraveCart Team</p>",
+                restaurantName, restaurantName);
+        if (resendApiKey != null && !resendApiKey.isBlank()) {
+            sendViaResend(toEmail, "Restaurant Registration Successful", htmlContent);
+        } else {
+            sendHtmlEmail(toEmail, "Restaurant Registration Successful", htmlContent);
+        }
+    }
 
     @Async
     public void sendWelcomeEmail(String toEmail, String name) {
