@@ -7,6 +7,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import jakarta.mail.internet.MimeMessage;
+import org.springframework.web.client.RestTemplate;
+import com.cravecart.backend.util.ResendRequest;
 
 @Service
 @RequiredArgsConstructor
@@ -14,7 +16,7 @@ public class EmailService {
 
     private final JavaMailSender mailSender;
 
-    // Mailjet API credentials removed – Gmail SMTP will be used via JavaMailSender
+    
 
     @Value("${spring.mail.username}")
     private String senderEmail;
@@ -152,18 +154,35 @@ public class EmailService {
     /**
      * Sends a generic HTML email.
      */
+    /**
+     * Sends an HTML email with simple retry mechanism (max 3 attempts).
+     */
     private void sendHtmlEmail(String to, String subject, String htmlContent) {
-        try {
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-            helper.setFrom(senderEmail, senderName);
-            helper.setTo(to);
-            helper.setSubject(subject);
-            helper.setText(htmlContent, true);
-            mailSender.send(message);
-            System.out.println(">> Gmail SMTP email sent to: [" + to + "]");
-        } catch (Exception e) {
-            System.err.println(">> Failed to send email via Gmail SMTP: " + e.getMessage());
+        int maxAttempts = 3;
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                MimeMessage message = mailSender.createMimeMessage();
+                MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+                helper.setFrom(senderEmail, senderName);
+                helper.setTo(to);
+                helper.setSubject(subject);
+                helper.setText(htmlContent, true);
+                mailSender.send(message);
+                System.out.println(">> Gmail SMTP email sent to: [" + to + "] (attempt " + attempt + ")");
+                break; // success, exit loop
+            } catch (Exception e) {
+                System.err.println(">> Failed to send email via Gmail SMTP (attempt " + attempt + "): " + e.getMessage());
+                if (attempt == maxAttempts) {
+                    // All attempts failed
+                    System.err.println(">> All retry attempts exhausted for email to: [" + to + "]");
+                } else {
+                    try {
+                        Thread.sleep(2000); // wait before next retry
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                    }
+                }
+            }
         }
     }
 
