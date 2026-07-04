@@ -24,6 +24,9 @@ public class EmailService {
     @Value("${spring.mail.username}")
     private String senderEmail;
 
+    @Value("${mailjet.sender.name:CraveCart}")
+    private String senderName;
+
     @Value("${RESEND_API_KEY:}")
 private String resendApiKey;
 
