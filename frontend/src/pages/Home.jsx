@@ -141,7 +141,7 @@ export default function Home() {
                     <div className="skeleton" style={{ height: '14px', width: '60%' }} />
                   </div>
                 </div>
-              ))}
+              ))
             </div>
           ) : filtered.length === 0 ? (
             <div className="empty-state">
